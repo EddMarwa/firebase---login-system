@@ -1,9 +1,9 @@
-// Import the functions you need from the SDKs
+// Import Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
-// Your web app's Firebase configuration
+// Firebase configuration (replace with your actual config values)
 const firebaseConfig = {
     apiKey: "AIzaSyBUmMTlt0SILwQ4DEKDxU1vEjx7eCLp_IU",
     authDomain: "loginsystem-8e494.firebaseapp.com",
@@ -15,86 +15,96 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and Firestore
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// DOM Elements
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const errorMessage = document.getElementById('error-message');
+// DOM elements for Login/Signup Page
 const authForm = document.getElementById('auth-form');
+const emailInput = document.getElementById('email-input');
+const passwordInput = document.getElementById('password-input');
 const submitButton = document.getElementById('submit-button');
-const formTitle = document.getElementById('form-title');
-const toggleLink = document.getElementById('toggle-link');
-const toggleText = document.getElementById('toggle-text');
+const toggleMode = document.getElementById('toggle-mode');
+const errorMessage = document.getElementById('error-message');
 
-// Initial Mode: Sign In
+// Sign up/Login toggle
 let isSignUpMode = false;
 
-// Toggle Between Sign-In and Sign-Up
-toggleLink.addEventListener('click', () => {
+// Toggle between Sign Up and Login
+toggleMode.addEventListener('click', () => {
     isSignUpMode = !isSignUpMode;
-    if (isSignUpMode) {
-        formTitle.textContent = "Sign Up";
-        submitButton.textContent = "Sign Up";
-        toggleText.innerHTML = "Already have an account? <span id='toggle-link'>Login</span>";
-    } else {
-        formTitle.textContent = "Login";
-        submitButton.textContent = "Login";
-        toggleText.innerHTML = "Don't have an account? <span id='toggle-link'>Sign Up</span>";
-    }
+    submitButton.textContent = isSignUpMode ? 'Sign Up' : 'Login';
+    toggleMode.textContent = isSignUpMode ? 'Already have an account? Login' : 'Don\'t have an account? Sign up';
 });
 
-// Handle Form Submission
+// Authentication Form Submission
 authForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const email = emailInput.value;
     const password = passwordInput.value;
 
+    console.log('Form submitted! Email:', email, 'Password:', password);  // Debugging log
+
     if (isSignUpMode) {
         // Sign Up
+        console.log('Attempting sign up...');
         createUserWithEmailAndPassword(auth, email, password)
             .then((userCredential) => {
-                // User successfully signed up
                 const user = userCredential.user;
-                console.log('Signed up with:', user.email);
+                console.log('Signed up successfully:', user.email);
 
                 // Store user info in Firestore
                 const userRef = doc(db, "users", user.uid);
                 setDoc(userRef, {
                     email: user.email,
                     createdAt: new Date(),
-                    // Add any other user details here (e.g., name, profilePic)
                 })
                     .then(() => {
                         console.log('User data stored in Firestore');
+                        window.location.href = 'dashboard.html'; // Redirect to dashboard
                     })
                     .catch((error) => {
-                        console.error("Error writing document: ", error);
+                        console.error("Error storing user data in Firestore:", error);
+                        errorMessage.textContent = `Error storing user data: ${error.message}`;
                     });
-
-                // Optionally, you can redirect to another page after successful sign up
             })
             .catch((error) => {
-                const errorCode = error.code;
-                const errorMessageText = error.message;
-                errorMessage.textContent = `Error: ${errorMessageText}`;
+                console.error("Error during sign-up:", error);
+                errorMessage.textContent = `Error during sign-up: ${error.message}`;
             });
     } else {
-        // Sign In
+        // Login
+        console.log('Attempting login...');
         signInWithEmailAndPassword(auth, email, password)
             .then((userCredential) => {
-                // User successfully signed in
                 const user = userCredential.user;
-                console.log('Signed in with:', user.email);
-                // Redirect or perform another action after successful sign in
+                console.log('Logged in successfully:', user.email);
+                window.location.href = 'dashboard.html'; // Redirect to dashboard
             })
             .catch((error) => {
-                const errorCode = error.code;
-                const errorMessageText = error.message;
-                errorMessage.textContent = `Error: ${errorMessageText}`;
+                console.error("Error during login:", error);
+                errorMessage.textContent = `Error during login: ${error.message}`;
             });
     }
+});
+
+// Monitor authentication state (for Dashboard)
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log('User is logged in:', user.email);
+    } else {
+        console.log('No user logged in');
+        window.location.href = 'index.html';  // Redirect to login page if not authenticated
+    }
+});
+
+// Logout functionality (Dashboard)
+logoutButton.addEventListener('click', () => {
+    signOut(auth)
+        .then(() => {
+            console.log('User logged out');
+            window.location.href = 'index.html'; // Redirect to login page after logout
+        })
+        .catch((error) => {
+            console.error('Error logging out:', error);
+        });
 });
