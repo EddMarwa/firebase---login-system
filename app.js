@@ -1,6 +1,7 @@
-// Import the functions you need from the SDKs you need
+// Import the functions you need from the SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -15,8 +16,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication
+// Initialize Firebase Authentication and Firestore
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 // DOM Elements
 const emailInput = document.getElementById('email');
@@ -58,7 +60,22 @@ authForm.addEventListener('submit', (e) => {
                 // User successfully signed up
                 const user = userCredential.user;
                 console.log('Signed up with:', user.email);
-                // Redirect or perform another action after successful sign up
+
+                // Store user info in Firestore
+                const userRef = doc(db, "users", user.uid);
+                setDoc(userRef, {
+                    email: user.email,
+                    createdAt: new Date(),
+                    // Add any other user details here (e.g., name, profilePic)
+                })
+                    .then(() => {
+                        console.log('User data stored in Firestore');
+                    })
+                    .catch((error) => {
+                        console.error("Error writing document: ", error);
+                    });
+
+                // Optionally, you can redirect to another page after successful sign up
             })
             .catch((error) => {
                 const errorCode = error.code;
